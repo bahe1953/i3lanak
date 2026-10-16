@@ -1,0 +1,5 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: Cairo, "Noto Sans Arabic", ui-sans-serif, system-ui, sans-serif;
+}
