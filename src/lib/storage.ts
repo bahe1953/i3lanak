@@ -25,7 +25,7 @@ export type Folder = (typeof FOLDERS)[number];
 const KEY_RE = /^u\/[0-9a-f-]{36}\/(photos|logos|posters|payments|proofs)\/[0-9a-f-]{36}\.(jpg|png|webp)$/;
 
 function blobEnabled() {
-  return Boolean(process.env.BLOB_READ_WRITE_TOKEN);
+  return Boolean(process.env.BLOB_READ_WRITE_TOKEN || process.env.BLOB_STORE_ID);
 }
 
 function localRoot() {
