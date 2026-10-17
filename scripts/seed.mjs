@@ -62,9 +62,21 @@ if (!email || !password) {
   console.error("✗ ADMIN_PASSWORD doit contenir au moins 12 caractères.");
   process.exitCode = 1;
 } else {
-  const existing = await client.query("select id from users where email = $1", [email]);
-  if (existing.rowCount) {
-    console.log(`• Le compte ${email} existe déjà, mot de passe inchangé`);
+  const existing = await client.query("select id, role from users where email = $1", [email]);
+  if (existing.rowCount && existing.rows[0].role === "admin") {
+    console.log(`• Le compte admin ${email} existe déjà, mot de passe inchangé`);
+  } else if (existing.rowCount) {
+    // Compte existant non admin (ex. créé via « Inscription ») : il devient admin avec le
+    // mot de passe défini dans ADMIN_PASSWORD, et ses sessions ouvertes sont fermées.
+    const id = existing.rows[0].id;
+    const hash = await bcrypt.hash(password, 12);
+    await client.query("update users set role = 'admin', password_hash = $2, updated_at = now() where id = $1", [id, hash]);
+    await client.query("delete from sessions where user_id = $1", [id]);
+    await client.query(
+      "insert into audit_logs (user_id, action, entity_type, entity_id, details) values ($1, 'user.promote_admin', 'user', $1, '{}'::jsonb)",
+      [id],
+    );
+    console.log(`✓ Le compte ${email} est passé administrateur (mot de passe = ADMIN_PASSWORD)`);
   } else {
     const hash = await bcrypt.hash(password, 12);
     await client.query(
