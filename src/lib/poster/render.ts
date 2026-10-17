@@ -20,19 +20,19 @@ export type PosterInput = {
 };
 
 export const POSTER_FONT = 'Cairo, "Noto Sans Arabic", Arial, sans-serif';
-type Ctx = CanvasRenderingContext2D;
-type Align = "left" | "right" | "center";
+export type Ctx = CanvasRenderingContext2D;
+export type Align = "left" | "right" | "center";
 
 const AR_RE = /[؀-ۿݐ-ݿﭐ-﷿ﹰ-﻿]/;
 const isAr = (s: string) => AR_RE.test(s);
 
 // ---------------------------------------------------------------- texte
 
-function font(ctx: Ctx, weight: number, size: number) {
+export function font(ctx: Ctx, weight: number, size: number) {
   ctx.font = `${weight} ${size}px ${POSTER_FONT}`;
 }
 
-function wrap(ctx: Ctx, text: string, maxW: number): string[] {
+export function wrap(ctx: Ctx, text: string, maxW: number): string[] {
   const words = text.split(/\s+/).filter(Boolean);
   const lines: string[] = [];
   let cur = "";
@@ -47,11 +47,11 @@ function wrap(ctx: Ctx, text: string, maxW: number): string[] {
   return lines;
 }
 
-type Block = { text: string; size: number; min?: number; weight: number; color: string; maxLines?: number; lh?: number };
-type Laid = Block & { lines: string[]; fsize: number; lineH: number; h: number };
+export type Block = { text: string; size: number; min?: number; weight: number; color: string; maxLines?: number; lh?: number };
+export type Laid = Block & { lines: string[]; fsize: number; lineH: number; h: number };
 
 /** Réduit la taille jusqu'à ce que le texte tienne dans maxW sur maxLines lignes. */
-function lay(ctx: Ctx, b: Block, maxW: number): Laid {
+export function lay(ctx: Ctx, b: Block, maxW: number): Laid {
   const maxLines = b.maxLines ?? 2;
   const min = b.min ?? Math.round(b.size * 0.6);
   let size = b.size;
@@ -76,7 +76,7 @@ function lay(ctx: Ctx, b: Block, maxW: number): Laid {
   return { ...b, lines, fsize: size, lineH, h: lines.length * lineH };
 }
 
-function drawLaid(ctx: Ctx, l: Laid, x: number, y: number, align: Align) {
+export function drawLaid(ctx: Ctx, l: Laid, x: number, y: number, align: Align) {
   font(ctx, l.weight, l.fsize);
   ctx.fillStyle = l.color;
   ctx.textAlign = align;
@@ -89,7 +89,7 @@ function drawLaid(ctx: Ctx, l: Laid, x: number, y: number, align: Align) {
 }
 
 /** Une ou deux langues selon le choix. */
-function bi(lang: PosterLanguage, fr?: string, ar?: string): string[] {
+export function bi(lang: PosterLanguage, fr?: string, ar?: string): string[] {
   const f = (fr ?? "").trim();
   const a = (ar ?? "").trim();
   if (lang === "fr") return f ? [f] : [];
@@ -98,7 +98,7 @@ function bi(lang: PosterLanguage, fr?: string, ar?: string): string[] {
 }
 
 /** Pile de blocs : mesure puis dessine. */
-class Stack {
+export class Stack {
   items: { l: Laid; gap: number }[] = [];
   constructor(
     private ctx: Ctx,
@@ -124,7 +124,7 @@ class Stack {
 
 // ---------------------------------------------------------------- formes & images
 
-function rr(ctx: Ctx, x: number, y: number, w: number, h: number, r: number) {
+export function rr(ctx: Ctx, x: number, y: number, w: number, h: number, r: number) {
   ctx.beginPath();
   ctx.roundRect(x, y, w, h, r);
 }
@@ -133,7 +133,7 @@ function dims(img: Img): [number, number] {
   return img instanceof HTMLImageElement ? [img.naturalWidth, img.naturalHeight] : [img.width, img.height];
 }
 
-function cover(ctx: Ctx, img: Img, x: number, y: number, w: number, h: number) {
+export function cover(ctx: Ctx, img: Img, x: number, y: number, w: number, h: number) {
   const [iw, ih] = dims(img);
   const s = Math.max(w / iw, h / ih);
   const sw = w / s;
@@ -148,7 +148,7 @@ function contain(ctx: Ctx, img: Img, x: number, y: number, w: number, h: number)
 }
 
 /** Zone photo : la photo, ou un emplacement visible si elle manque. */
-function photoBox(ctx: Ctx, img: Img | null, x: number, y: number, w: number, h: number, r: number, empty: string, ink: string) {
+export function photoBox(ctx: Ctx, img: Img | null, x: number, y: number, w: number, h: number, r: number, empty: string, ink: string) {
   ctx.save();
   rr(ctx, x, y, w, h, r);
   ctx.clip();
@@ -175,7 +175,7 @@ function photoBox(ctx: Ctx, img: Img | null, x: number, y: number, w: number, h:
   ctx.restore();
 }
 
-function logoDisc(ctx: Ctx, img: Img, cx: number, cy: number, r: number, ring: string) {
+export function logoDisc(ctx: Ctx, img: Img, cx: number, cy: number, r: number, ring: string) {
   ctx.save();
   ctx.beginPath();
   ctx.arc(cx, cy, r, 0, Math.PI * 2);
@@ -190,7 +190,7 @@ function logoDisc(ctx: Ctx, img: Img, cx: number, cy: number, r: number, ring: s
 }
 
 /** En-tête : logo + nom du commerçant. Renvoie le bas de l'en-tête. */
-function header(ctx: Ctx, inp: PosterInput, W: number, y: number, align: Align, color: string, ring: string, shadow = false) {
+export function header(ctx: Ctx, inp: PosterInput, W: number, y: number, align: Align, color: string, ring: string, shadow = false) {
   const r = 50;
   const name = inp.merchantName.trim();
   if (!inp.logo && !name) return y;
@@ -221,7 +221,7 @@ function header(ctx: Ctx, inp: PosterInput, W: number, y: number, align: Align, 
 }
 
 /** Pastille WhatsApp + ligne ville/adresse. Dessine en partant du bas. Renvoie le haut. */
-function contactZone(
+export function contactZone(
   ctx: Ctx,
   inp: PosterInput,
   W: number,
@@ -278,7 +278,7 @@ function contactZone(
   return y;
 }
 
-function badge(ctx: Ctx, text: string, x: number, y: number, anchor: "left" | "right", bg: string, ink: string, skew = 0) {
+export function badge(ctx: Ctx, text: string, x: number, y: number, anchor: "left" | "right", bg: string, ink: string, skew = 0) {
   if (!text.trim()) return;
   const l = lay(ctx, { text: text.toUpperCase(), size: 34, min: 24, weight: 800, color: ink, maxLines: 1, lh: 1 }, 420);
   font(ctx, 800, l.fsize);
@@ -300,7 +300,7 @@ function badge(ctx: Ctx, text: string, x: number, y: number, anchor: "left" | "r
 }
 
 /** Titre + accroche, mesurés ensemble. */
-function titleStack(ctx: Ctx, inp: PosterInput, maxW: number, big: number, color: string, sub: string, k = 1) {
+export function titleStack(ctx: Ctx, inp: PosterInput, maxW: number, big: number, color: string, sub: string, k = 1) {
   const st = new Stack(ctx, maxW);
   const heads = bi(inp.language, inp.texts.headlineFr, inp.texts.headlineAr);
   heads.forEach((t, i) => st.add({ text: t, size: i ? Math.round(big * 0.72) : big, weight: 800, color, maxLines: 2 }, i ? 4 : 0));

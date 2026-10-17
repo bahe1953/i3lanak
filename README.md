@@ -42,13 +42,9 @@ Stack : Next.js 16 · React 19 · TypeScript · Tailwind 4 · PostgreSQL (Drizzl
    - `NEXT_PUBLIC_WHATSAPP_NUMBER` (ex. `22212345678`)
    - optionnel : `OPENAI_API_KEY`
 5. **Déployer** (*Deployments → Redeploy*). Le script `vercel-build` applique automatiquement
-   les migrations de base de données avant de construire le site.
-6. **Créer le compte admin et les forfaits**, une seule fois, depuis votre ordinateur :
-   ```bash
-   npm install
-   npx vercel env pull .env      # récupère les variables du projet Vercel
-   npm run db:seed
-   ```
+   les migrations, crée les 3 forfaits et le compte admin (s'ils n'existent pas encore), puis construit le site.
+   Un mot de passe admin de moins de 12 caractères fait échouer le déploiement avec un message clair.
+6. Les redéploiements suivants ne modifient ni les forfaits ni le mot de passe admin existants.
 7. **Créer les opérateurs** :
    ```bash
    npm run user:create -- --email ali@it-rim.net --name "Ali" --role operator --password "un-mot-de-passe-long"

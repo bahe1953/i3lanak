@@ -1,0 +1,1 @@
+ALTER TABLE "posters" ADD COLUMN "video_key" text;

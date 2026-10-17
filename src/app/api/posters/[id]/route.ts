@@ -41,8 +41,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (d.status && d.status !== poster.status) {
     // Règles honnêtes : on n'envoie/valide qu'une affiche réellement enregistrée,
     // et « Publiée » exige le lien de la publication.
-    if (d.status !== "draft" && !next.imageKey) {
-      return NextResponse.json({ error: "Enregistrez d'abord l'affiche finale (bouton « Enregistrer l'image »)." }, { status: 400 });
+    if (d.status !== "draft" && !next.imageKey && !next.videoKey) {
+      return NextResponse.json({ error: "Enregistrez d'abord l'affiche ou la vidéo finale (bouton « Enregistrer »)." }, { status: 400 });
     }
     if (d.status === "published" && !next.publicationUrl) {
       return NextResponse.json({ error: "Ajoutez le lien de la publication avant de la marquer « Publiée »." }, { status: 400 });

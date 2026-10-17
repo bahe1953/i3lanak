@@ -10,6 +10,8 @@ import {
 } from "@/lib/poster/catalog";
 import { ensurePosterFonts, loadImage, renderPoster } from "@/lib/poster/render";
 import { uploadBlob, uploadImage } from "@/lib/client-upload";
+import VideoPanel from "@/components/VideoPanel";
+import type { VideoInput } from "@/lib/poster/video";
 
 type Poster = {
   id: string;
@@ -29,6 +31,7 @@ type Poster = {
   language: PosterLanguage;
   texts: PosterTexts;
   imageKey: string | null;
+  videoKey: string | null;
   status: PosterStatus;
   publicationUrl: string | null;
 };
@@ -143,6 +146,7 @@ export default function PosterEditorPage() {
   const [images, setImages] = useState<Record<string, HTMLImageElement>>({});
   const [variant, setVariant] = useState(0);
   const [aiConfigured, setAiConfigured] = useState(false);
+  const [tab, setTab] = useState<"poster" | "video">("poster");
   const [merchants, setMerchants] = useState<Merchant[]>([]);
 
   // Chargement initial
@@ -167,17 +171,18 @@ export default function PosterEditorPage() {
     };
   }, [id]);
 
-  // Chargement des images nécessaires (photo principale + logo)
+  // Chargement des images nécessaires (3 premières photos pour la vidéo + logo)
   const mainPhoto = form?.photoKeys[0] ?? null;
   const logoKey = form?.logoKey ?? null;
+  const photoList = (form?.photoKeys ?? []).slice(0, 3).join("|");
   useEffect(() => {
-    for (const k of [mainPhoto, logoKey]) {
+    for (const k of [...photoList.split("|"), logoKey]) {
       if (!k || images[k]) continue;
       loadImage(fileUrl(k)!)
         .then((img) => setImages((m) => ({ ...m, [k]: img })))
         .catch(() => setMessage({ kind: "err", text: "Une image n'a pas pu être chargée." }));
     }
-  }, [mainPhoto, logoKey, images]);
+  }, [photoList, logoKey, images]);
 
   // Rendu en direct
   useEffect(() => {
@@ -198,6 +203,42 @@ export default function PosterEditorPage() {
       logo: logoKey ? images[logoKey] ?? null : null,
     });
   }, [form, fontsReady, images, mainPhoto, logoKey]);
+
+  // Données de la vidéo : mêmes informations que l'affiche + jusqu'à 3 photos
+  const videoInput = useMemo<VideoInput | null>(() => {
+    if (!form) return null;
+    const price = form.price.replace(/\s/g, "");
+    const photos = photoList ? photoList.split("|").map((k) => images[k]).filter(Boolean) : [];
+    return {
+      template: form.template,
+      format: form.format,
+      language: form.language,
+      texts: form.texts,
+      price: price === "" || Number.isNaN(Number(price)) ? null : Number(price),
+      currency: form.currency,
+      merchantName: form.merchantName,
+      whatsapp: form.whatsapp,
+      city: form.city,
+      contactLine: form.contactLine,
+      photo: photos[0] ?? null,
+      logo: logoKey ? images[logoKey] ?? null : null,
+      photos,
+    };
+  }, [form, images, photoList, logoKey]);
+
+  async function saveVideo(blob: Blob, ext: string) {
+    setBusy("video");
+    try {
+      const { key } = await uploadBlob(blob, "videos", `video.${ext}`);
+      const p = await save({ videoKey: key });
+      return Boolean(p);
+    } catch (e) {
+      setMessage({ kind: "err", text: (e as Error).message });
+      return false;
+    } finally {
+      setBusy(null);
+    }
+  }
 
   // Alerte avant de quitter avec des modifications non enregistrées
   useEffect(() => {
@@ -251,7 +292,7 @@ export default function PosterEditorPage() {
   }
 
   // Enregistre une copie JPEG de l'affiche (la limite de 4 Mo par requête exclut le PNG en story).
-  async function saveImage() {
+  async function saveFile() {
     setBusy("image");
     try {
       const blob = await canvasBlob("image/jpeg", 0.92);
@@ -414,6 +455,22 @@ export default function PosterEditorPage() {
         {/* Aperçu */}
         <div className="lg:order-2">
           <div className="lg:sticky lg:top-20">
+            <div className="mb-3 flex justify-center">
+              <div className="inline-flex rounded-lg bg-slate-100 p-1 text-sm font-semibold" role="tablist">
+                {(["poster", "video"] as const).map((k) => (
+                  <button
+                    key={k}
+                    role="tab"
+                    aria-selected={tab === k}
+                    onClick={() => setTab(k)}
+                    className={`rounded-md px-4 py-1.5 ${tab === k ? "bg-white shadow-sm" : "text-slate-600 hover:text-slate-900"}`}
+                  >
+                    {k === "poster" ? `🖼 ${a.tabPoster}` : `🎬 ${a.tabVideo}`}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div hidden={tab !== "poster"}>
             <div className="mx-auto rounded-2xl bg-slate-200 p-3" style={{ maxWidth: form.format === "story" ? 400 : 600 }}>
               <canvas
                 ref={canvasRef}
@@ -428,17 +485,28 @@ export default function PosterEditorPage() {
                 ⬇ {a.exportPng}
               </button>
               <button
-                onClick={saveImage}
+                onClick={saveFile}
                 disabled={!!busy || !fontsReady}
                 className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold hover:bg-slate-50 disabled:opacity-50"
               >
-                {busy === "image" ? a.saving : a.saveImage}
+                {busy === "image" ? a.saving : a.saveFile}
               </button>
             </div>
             {poster.imageKey && (
               <p className={`mt-2 text-center text-xs ${imageOutdated ? "text-amber-600" : "text-emerald-700"}`}>
                 {imageOutdated ? a.imageOutdated : `✓ ${a.imageSaved}`}
               </p>
+            )}
+            </div>
+            {tab === "video" && (
+              <VideoPanel
+                input={videoInput}
+                ready={fontsReady}
+                labels={a.video}
+                savedVideoUrl={poster.videoKey ? fileUrl(poster.videoKey) : null}
+                fileSlug={(form.productName || "video").normalize("NFD").replace(/[^\w-]+/g, "-").replace(/-+/g, "-").toLowerCase()}
+                onSave={saveVideo}
+              />
             )}
           </div>
         </div>

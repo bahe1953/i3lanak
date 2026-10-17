@@ -23,6 +23,7 @@ export const posterUpdateSchema = z
     language: z.enum(LANGUAGES),
     texts: z.object(Object.fromEntries(TEXT_KEYS.map((k) => [k, txt(220).optional()]))).strict(),
     imageKey: key("posters").nullable(),
+    videoKey: key("videos").nullable(),
     status: z.enum(POSTER_STATUSES),
     publicationUrl: z.string().trim().url("Lien de publication invalide").max(500).nullable().or(z.literal("")),
   })

@@ -17,14 +17,18 @@ const ALLOWED: Record<string, string> = {
   "image/jpeg": "jpg",
   "image/png": "png",
   "image/webp": "webp",
+  "video/mp4": "mp4",
+  "video/webm": "webm",
 };
+const VIDEO_TYPES = ["video/mp4", "video/webm"];
 
-export const FOLDERS = ["photos", "logos", "posters", "payments", "proofs"] as const;
+export const FOLDERS = ["photos", "logos", "posters", "payments", "proofs", "videos"] as const;
 export type Folder = (typeof FOLDERS)[number];
 
-const KEY_RE = /^u\/[0-9a-f-]{36}\/(photos|logos|posters|payments|proofs)\/[0-9a-f-]{36}\.(jpg|png|webp)$/;
+const KEY_RE = /^u\/[0-9a-f-]{36}\/(photos|logos|posters|payments|proofs|videos)\/[0-9a-f-]{36}\.(jpg|png|webp|mp4|webm)$/;
 
 function blobEnabled() {
+  // Jeton classique, ou nouvelle connexion Vercel (BLOB_STORE_ID + jeton OIDC fourni par Vercel).
   return Boolean(process.env.BLOB_READ_WRITE_TOKEN || process.env.BLOB_STORE_ID);
 }
 
@@ -48,15 +52,21 @@ function sniffType(buf: Buffer): string | null {
     return "image/png";
   if (buf.length > 12 && buf.subarray(0, 4).toString() === "RIFF" && buf.subarray(8, 12).toString() === "WEBP")
     return "image/webp";
+  if (buf.length > 12 && buf.subarray(4, 8).toString() === "ftyp") return "video/mp4";
+  if (buf.length > 4 && buf[0] === 0x1a && buf[1] === 0x45 && buf[2] === 0xdf && buf[3] === 0xa3) return "video/webm";
   return null;
 }
 
-export async function saveImage(ownerId: string, folder: Folder, file: File): Promise<string> {
+export async function saveFile(ownerId: string, folder: Folder, file: File): Promise<string> {
   if (file.size === 0) throw new StorageError("Fichier vide.");
   if (file.size > MAX_UPLOAD_BYTES) throw new StorageError("Fichier trop lourd (4 Mo maximum).", 413);
   const buf = Buffer.from(await file.arrayBuffer());
   const type = sniffType(buf);
-  if (!type || !ALLOWED[type]) throw new StorageError("Format non accepté : JPEG, PNG ou WebP uniquement.", 415);
+  if (!type || !ALLOWED[type]) throw new StorageError("Format non accepté : JPEG, PNG, WebP, ou vidéo MP4/WebM.", 415);
+  // Les vidéos ne vont que dans le dossier « videos », et inversement.
+  if ((folder === "videos") !== VIDEO_TYPES.includes(type)) {
+    throw new StorageError(folder === "videos" ? "Seules les vidéos MP4 ou WebM vont ici." : "Format non accepté : JPEG, PNG ou WebP uniquement.", 415);
+  }
 
   const key = `u/${ownerId}/${folder}/${randomUUID()}.${ALLOWED[type]}`;
 
@@ -88,7 +98,7 @@ export function canRead(user: SafeUser, key: string) {
   return ownerOfKey(key) === user.id;
 }
 
-export async function readImage(key: string): Promise<{ body: ReadableStream | Buffer; contentType: string } | null> {
+export async function readStored(key: string): Promise<{ body: ReadableStream | Buffer; contentType: string } | null> {
   if (!isValidKey(key)) return null;
   const ext = key.split(".").pop()!;
   const contentType = Object.entries(ALLOWED).find(([, e]) => e === ext)?.[0] ?? "application/octet-stream";

@@ -274,6 +274,7 @@ export const posters = pgTable("posters", {
   texts: jsonb("texts").$type<Record<string, string>>().notNull().default({}),
   // Résultat et suivi
   imageKey: text("image_key"),
+  videoKey: text("video_key"),
   status: posterStatusEnum("status").notNull().default("draft"),
   publicationUrl: text("publication_url"),
   sentAt: timestamp("sent_at", { withTimezone: true }),

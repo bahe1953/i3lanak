@@ -3,7 +3,7 @@
 // Redimensionne une image dans le navigateur puis l'envoie à /api/uploads.
 // Les photos de téléphone (souvent 5 à 12 Mo) passent ainsi sous la limite de 4 Mo.
 
-type Folder = "photos" | "logos" | "posters" | "payments" | "proofs";
+type Folder = "photos" | "logos" | "posters" | "payments" | "proofs" | "videos";
 
 async function toBitmap(file: Blob): Promise<ImageBitmap> {
   return createImageBitmap(file, { imageOrientation: "from-image" });
