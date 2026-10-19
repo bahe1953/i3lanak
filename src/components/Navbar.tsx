@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useLocale, useT } from "@/components/LanguageProvider";
 
 type User = { id: string; name: string; email: string; role: string } | null;
@@ -10,15 +10,18 @@ type User = { id: string; name: string; email: string; role: string } | null;
 export default function Navbar() {
   const [user, setUser] = useState<User>(null);
   const router = useRouter();
+  const pathname = usePathname();
   const { locale, setLocale } = useLocale();
   const t = useT();
 
+  // Revérifié à chaque changement de page : après connexion ou inscription,
+  // la navigation se fait sans rechargement et le menu doit se mettre à jour.
   useEffect(() => {
-    fetch("/api/me")
+    fetch("/api/me", { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => setUser(d?.user ?? null))
       .catch(() => setUser(null));
-  }, []);
+  }, [pathname]);
 
   async function logout() {
     await fetch("/api/auth/logout", { method: "POST" });
